@@ -43,6 +43,8 @@ TODO: Update this table against the final submitted revision; remove superseded 
 
 **Unlisted YouTube video:** TODO: Insert the final video link.
 
+[Demo script and recording cues](DEMO.md) — approximately 7 minutes 20 seconds across three speakers; group review and rehearsal pending.
+
 The presentation will show the design and messaging rationale, local and Azure order-to-analytics demonstrations, and the deployed architecture. All three members will present. Target length: 5–10 minutes; recording tool: OBS Studio. See the [assignment presentation instructions](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project#video-presentation).
 
 ## Service Overview and Repositories
