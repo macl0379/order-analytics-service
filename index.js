@@ -50,6 +50,62 @@ app.get('/analytics/summary', (req, res) => {
     });
 });
 
+
+app.get('/analytics/products', (req, res) => {
+    const products = {};
+
+    orders.forEach(order => {
+        const name = order.product.name;
+
+        if (!products[name]) {
+            products[name] = {
+                productName: name,
+                orderCount: 0,
+                totalRevenue: 0
+            };
+        }
+
+        products[name].orderCount++;
+        products[name].totalRevenue += order.totalPrice;
+    });
+
+    // Convert the products object to an array and round totalRevenue to 2 decimal places
+    const result = Object.values(products).map(product => ({
+        ...product,
+        totalRevenue: Number(product.totalRevenue.toFixed(2))
+    }));
+
+    res.json(result);
+});
+
+
+
+app.get('/analytics/top-products', (req, res) => {
+    const products = {};
+
+    // Aggregate total quantity sold for each product
+    orders.forEach(order => {
+        const name = order.product.name;
+
+        if (!products[name]) {
+            products[name] = {
+                productName: name,
+                totalQuantity: 0
+            };
+        }
+
+        products[name].totalQuantity += order.quantity;
+    });
+
+    const topProducts = Object.values(products)
+    //sort products by totalQuantity in descending order and slice the top 3
+        .sort((a, b) => b.totalQuantity - a.totalQuantity)
+        .slice(0, 3);
+
+    res.json(topProducts);
+});
+
+
 // Start the HTTP server
 app.listen(PORT, () => {
     console.log(`Analytics service running on port ${PORT}`);
