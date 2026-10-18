@@ -46,9 +46,9 @@ app.get('/analytics/summary', (req, res) => {
     });
 });
 
-
-
 // Start the HTTP server
 app.listen(PORT, () => {
     console.log(`Analytics service running on port ${PORT}`);
 });
+
+module.exports = orders; // Export orders for testing purposes
