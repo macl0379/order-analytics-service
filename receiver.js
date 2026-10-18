@@ -26,6 +26,7 @@ async function receiveOrders() {
       try {
         // parse the order
         const order = JSON.parse(msg.content.toString());
+        order.totalPrice = Number(order.totalPrice.toFixed(2));
         
         // send order to local storage for demo purposes only
         orders.push(order);
