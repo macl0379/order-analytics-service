@@ -2,39 +2,31 @@
 
 **Status:** Group review draft, October 18, 2026.
 
-**Target length:** About 7 minutes 20 seconds, including screen changes and live actions. Suggested speakers can be swapped.
+**Target length:** Around 6–8 minutes, including screen changes and live actions. Timing and speaker allocation are flexible.
 
 This is a script for the completed demonstration. Only narrate successful processing after seeing matching results. Replace bracketed text with verified details. Stage directions are not spoken. The script does not establish that the demonstrations have already succeeded.
 
-| Time | Suggested speaker | Section |
+| Approximate time | Suggested speaker | Section |
 | --- | --- | --- |
-| 0:00–2:20 | Collin MacLeod | Overview, technology, consumer pattern |
-| 2:20–5:00 | Azubair Dawd | Local and Azure demonstrations |
-| 5:00–7:20 | David Yin | Architecture, design limits, conclusion |
+| About 2 minutes | Collin MacLeod | Overview, technology, consumer pattern |
+| About 2–3 minutes | Azubair Dawd | Local and Azure demonstrations |
+| About 2 minutes | David Yin | Architecture, design limits, conclusion |
 
 The structure covers the [assignment's presentation topics](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project#video-presentation). Use the [README architecture diagram](README.md#architecture), reconciled with the final deployment, during section 3.
+
+For shorter speaking prompts, use the accompanying [bullet-point outline](DEMO_OUTLINE.md).
 
 ## Before Recording
 
 Prepare the storefront, API tabs, RabbitMQ Management, Azure resource group, and diagram. Warm up the applications beforehand. Use separate local/cloud broker environments, or stop the other consumer when switching environments.
 
-The example below assumes an empty analytics dataset with no old queued orders. Use a dedicated test environment; do not purge a shared queue.
+Choose products and quantities naturally during the demonstration. No particular product, order sequence, quantity, price, or final total is prescribed by this script. Use the actual catalog and explain the results visible on screen.
 
-Submit these three orders in each environment:
-
-| Product | Quantity | Line total |
-| --- | ---: | ---: |
-| Dog Food at 19.99 | 2 | 39.98 |
-| Cat Food at 34.99 | 1 | 34.99 |
-| Bird Seeds at 10.99 | 3 | 32.97 |
-
-Expected: **3 orders, 107.94 revenue, 35.98 average**. Confirm catalog prices before recording.
-
-If an environment already contains orders, record a stable baseline and describe increases instead. The expected increases are three orders and 107.94 revenue; the overall average depends on the earlier orders. Reconcile all narrative with observed results.
+Note the existing analytics state before submitting orders. The dataset does not need to start empty; explain changes from the baseline if it already contains data. Allow processing to finish and compare the received orders and calculated results with what you actually submitted. Do not purge a shared queue to prepare the recording.
 
 ## 1. Collin — Overview and Messaging Pattern
 
-**Time:** 0:00–2:20
+**Approximate time:** About 2 minutes.
 
 *[Show the project title, group names, and repository.]*
 
@@ -60,51 +52,55 @@ I'll now hand over to Azubair to demonstrate the complete flow locally and on Az
 
 ## 2. Azubair — Local and Azure Demonstrations
 
-**Time:** 2:20–5:00
+**Approximate time:** About 2–3 minutes.
 
-*[Show local service terminals and the local storefront.]*
+*[Show local service terminals and the local storefront, with local addresses visible.]*
 
 “First, this is our local environment. Product Service, Order Service, the storefront, RabbitMQ, and analytics are running.
 
-The analytics startup log shows that the consumer registered successfully.”
+Let's look at the state before placing new orders. The health endpoint shows that the HTTP API is responding. To verify processing, we'll also check received messages and the actual order data.”
 
-*[Point to the consumer-ready message. Show `/health`, then the initial summary.]*
+*[Show `/health`, the current orders, and the current summary. Do not assume an empty dataset.]*
 
-“The summary currently contains zero orders. We'll submit three orders with different quantities so that order count and quantity sold are clearly different.”
+“We'll now place several orders through the storefront. We can choose different products and quantities from the current catalog. As each order is submitted, we can see the selected product, quantity, and displayed total.”
 
-*[Through the storefront, submit Dog Food ×2, Cat Food ×1, and Bird Seeds ×3. Allow roughly 20–25 seconds.]*
+*[Submit orders of your choice. Briefly describe the selections actually made.]*
 
-“These orders total 107 dollars and 94 cents. The expected average across three orders is 35 dollars and 98 cents.”
+“Next, we'll check what reached analytics.”
 
-*[Show the receiver logs and RabbitMQ queue activity.]*
+*[Show available receiver logs and RabbitMQ consumer, delivery, or acknowledgement activity. Allow processing to finish.]*
 
-“Here are the received messages. RabbitMQ shows the registered consumer and acknowledgement activity.”
+“The received-message logs and broker activity help us trace the delivery. We'll compare those with the API responses so we can confirm the submitted orders were recorded.”
 
-*[Only say the next paragraph after confirming the displayed values. Show `/orders`, `/analytics/summary`, `/analytics/products`, and `/analytics/top-products` in prepared tabs.]*
+*[Show `/orders`, `/analytics/summary`, `/analytics/products`, and `/analytics/top-products`.]*
 
-“The orders endpoint contains three entries. The summary matches our expected total and average.
+“The orders endpoint shows the received orders and their quantities and totals. We can compare the newly added entries with what we just submitted.
 
-The product endpoint groups the order counts and revenue by product name. Top-products ranks by quantity: Bird Seeds has three, Dog Food has two, and Cat Food has one. This is different from ranking by revenue.”
+The summary shows the current order count, revenue, and average order value. If the service already contained orders, these results include that earlier data as well.
 
-*[Switch to Azure Portal → shared resource group, then deployed storefront.]*
+The product endpoint groups orders by product name. Its order count measures how many orders contain that product, while top-products ranks the total units sold. Those are different measurements, so the ranking does not have to match the order count or revenue.”
 
-“Now we'll repeat the workflow on Azure. These are our deployed backend applications and the VM resources used by the application.”
+*[Briefly explain the actual changes and confirm their arithmetic before describing the results as correct. Switch to Azure Portal and the deployed storefront.]*
 
-*[Show the deployed analytics baseline, then submit the same three orders through the deployed storefront. Allow another 20–25 seconds.]*
+“Now we'll repeat the workflow on Azure. Here are our backend applications and the VM resources used by the deployment.
 
-“We are using the deployed storefront and public HTTPS APIs for this run.”
+We'll first note the current deployed results, then place orders through the deployed storefront. The cloud dataset does not need to match the local one.”
 
-*[Show deployed `/orders`, summary, product grouping, and top-products.]*
+*[Show the deployed baseline. Submit orders of your choice through the deployed storefront; they do not need to repeat the local selections.]*
 
-“The deployed analytics results match the three orders we just submitted. This demonstrates the flow from the browser, through Order Service and RabbitMQ, into the analytics API.
+“These requests use the deployed storefront and public HTTPS APIs. We'll now check the received orders and refresh the analytics.”
 
-David will now walk through how those components communicate.”
+*[Show deployed logs or broker activity where available, then deployed orders, summary, product grouping, and top-products.]*
 
-*If the Azure dataset was not empty, describe the measured increases instead: three additional orders and 107.94 additional revenue. Do not claim the overall average is 35.98. If results do not match, resolve the issue and repeat the demonstration before narrating success.*
+“We can compare the new entries and analytics changes with the orders just submitted. Together, the storefront actions, message-processing evidence, and matching API data demonstrate the Azure workflow.
+
+David will now explain how these components communicate.”
+
+*Only describe the workflow as successful after seeing matching results. If results do not match, investigate and repeat the demonstration before recording a success claim.*
 
 ## 3. David — Architecture and Conclusion
 
-**Time:** 5:00–7:20
+**Approximate time:** About 2 minutes.
 
 *[Show the final architecture diagram. Follow the arrows with the cursor.]*
 
@@ -144,4 +140,4 @@ Time one complete run with the actual clicks. Trim repeated navigation before tr
 
 The group should confirm the speaker allocation, final file responsibilities, hosting arrangement, numeric results, and actual AI review before recording. Upload the completed recording as an unlisted YouTube video and replace the README's video placeholder with its link.
 
-**AI assistance:** This script was drafted with OpenAI Codex on October 18, 2026, at David Yin's request. Student review and rehearsal remain to be completed. Include this assistance in the final [README disclosure](README.md#ai-assistance-and-student-review).
+**AI assistance:** This script was drafted and revised with OpenAI Codex on October 18, 2026, at David Yin's request. Student review and rehearsal remain to be completed. Include this assistance in the final [README disclosure](README.md#ai-assistance-and-student-review).
