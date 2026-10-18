@@ -1,3 +1,7 @@
+//  AI Disclosure:
+// ChatGPT was used to assist with writing code
+// All code was reviewed, tested, and understood before submission.
+
 
 const express = require('express');
 require('dotenv').config();
@@ -12,7 +16,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 4000;
 
 // In-memory storage for incoming orders
-const orders = [];
+const orders = require('./orders');
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -51,4 +55,3 @@ app.listen(PORT, () => {
     console.log(`Analytics service running on port ${PORT}`);
 });
 
-module.exports = orders; // Export orders for testing purposes

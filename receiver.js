@@ -4,9 +4,7 @@
 const amqp = require('amqplib');
 
 // import orders array from index.js local storage for demo purposes only
-const { orders } = require('./index.js');
-
-
+const orders = require('./orders');
 
 // define RabbitMQ string
 const RABBITMQ_CONNECTION_STRING = process.env.RABBITMQ_CONNECTION_STRING || 'amqp://localhost';
@@ -21,25 +19,25 @@ async function receiveOrders() {
   // create the queue and ensure it follows the required properties
   await channel.assertQueue('order_queue', { durable: true });
 
-  channel.consume('order_queue', (orders) => {
+ channel.consume('order_queue', (msg) => {
     // check if message is not empty and parse the order from the message content
-    if (orders) {
+    if (msg) {
       try {
         // parse the order
-        const order = JSON.parse(orders.content.toString());
+        const order = JSON.parse(msg.content.toString());
         
         // send order to local storage for demo purposes only
         orders.push(order);
 
         // acknowledge the message to RabbitMQ to indicate successful processing
-        channel.ack(orders);
+        channel.ack(msg);
 
         // log the received order for debugging purposes
         console.log('Order received:', order);
       } catch (error) {
         // Error handling
         console.error('Error processing order:', error);
-        channel.nack(orders, false, false);
+        channel.nack(msg, false, false);
       }
     }
   });
