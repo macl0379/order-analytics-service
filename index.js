@@ -15,8 +15,16 @@ app.use(express.json());
 // Use Azure's port or 4000 for local development
 const PORT = process.env.PORT || 4000;
 
+// Import the receiveOrders function from receiver.js and start receiving orders from RabbitMQ
+const receiveOrders = require('./receiver');
+receiveOrders().catch((error) => {
+    console.error('Error receiving orders:', error);
+    process.exit(1);
+});
+
 // In-memory storage for incoming orders
 const orders = require('./orders');
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {

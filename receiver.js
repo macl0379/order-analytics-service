@@ -22,6 +22,7 @@ async function receiveOrders() {
  channel.consume('order_queue', (msg) => {
     // check if message is not empty and parse the order from the message content
     if (msg) {
+      console.log('Received order message:')
       try {
         // parse the order
         const order = JSON.parse(msg.content.toString());
