@@ -1,8 +1,12 @@
 // Code developed with ChatGPT comments added by Collin MacLeod
 
-// import the amqplib library for RabbitMQ communication and orders module for storing received orders
+// import the amqplib library for RabbitMQ communication
 const amqp = require('amqplib');
-const orders = require('./orders');
+
+// import orders array from index.js local storage for demo purposes only
+const { orders } = require('./index.js');
+
+
 
 // define RabbitMQ string
 const RABBITMQ_CONNECTION_STRING = process.env.RABBITMQ_CONNECTION_STRING || 'amqp://localhost';
@@ -23,6 +27,7 @@ async function receiveOrders() {
       try {
         // parse the order
         const order = JSON.parse(orders.content.toString());
+        
         // send order to local storage for demo purposes only
         orders.push(order);
 
