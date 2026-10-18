@@ -27,6 +27,27 @@ app.get('/orders', (req, res) => {
     res.json(orders);
 });
 
+// Calculate overall order statistics
+app.get('/analytics/summary', (req, res) => {
+    const totalOrders = orders.length;
+
+    const totalRevenue = orders.reduce((sum, order) => {
+        return sum + order.totalPrice;
+    }, 0);
+
+    const averageOrderValue = totalOrders > 0
+        ? totalRevenue / totalOrders
+        : 0;
+
+    res.json({
+        totalOrders,
+        totalRevenue: Number(totalRevenue.toFixed(2)),
+        averageOrderValue: Number(averageOrderValue.toFixed(2))
+    });
+});
+
+
+
 // Start the HTTP server
 app.listen(PORT, () => {
     console.log(`Analytics service running on port ${PORT}`);
