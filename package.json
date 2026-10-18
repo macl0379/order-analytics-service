@@ -1,0 +1,26 @@
+{
+  "name": "order-analytics-service",
+  "version": "1.0.0",
+  "description": "**Student Names**: Collin MacLeod, Azubair Dawd, David Yin\r **Course**: CST8915 Full-stack Cloud-native Development\r **Semester**: Fall 2026",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/macl0379/order-analytics-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/macl0379/order-analytics-service/issues"
+  },
+  "homepage": "https://github.com/macl0379/order-analytics-service#readme",
+  "dependencies": {
+    "amqplib": "^2.2.0",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0"
+  }
+}
