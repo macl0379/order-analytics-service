@@ -18,7 +18,7 @@ For shorter speaking prompts, use the accompanying [bullet-point outline](DEMO_O
 
 ## Before Recording
 
-Prepare the storefront, API tabs, RabbitMQ Management, Azure resource group, and diagram. Warm up the applications beforehand. Use separate local/cloud broker environments, or stop the other consumer when switching environments.
+Record using OBS Studio, as listed in the assignment. Prepare the storefront, API tabs, RabbitMQ Management, Azure resource group, and diagram. Warm up the applications beforehand. Use separate local/cloud broker environments, or stop the other consumer when switching environments.
 
 Choose products and quantities naturally during the demonstration. No particular product, order sequence, quantity, price, or final total is prescribed by this script. Use the actual catalog and explain the results visible on screen.
 
@@ -32,15 +32,15 @@ Note the existing analytics state before submitting orders. The dataset does not
 
 “Hello, we're Collin MacLeod, Azubair Dawd, and David Yin. Our project extends the Algonquin Pet Store with an Order Analytics Service.
 
-The existing application lets customers browse products and place orders. Order Service publishes those orders to RabbitMQ. Our new service receives the messages and exposes useful results, including consumed orders, total revenue, average order value, revenue by product, and the products with the highest quantities sold.”
+The existing application lets customers browse products and place orders. Order Service publishes those orders to RabbitMQ. Our new service receives the messages and exposes useful results, including the 5 exposed endpoints: consumed orders, total revenue, average order value, revenue by product, and the products with the highest quantities sold.”
 
 *[Show `index.js`, `receiver.js`, and `orders.js` briefly.]*
 
-“We chose Node.js with Express for the HTTP API and amqplib for RabbitMQ communication. This keeps the implementation small and uses JavaScript, which is already used by Order Service.
+“We chose Node.js with Express for the HTTP API and amqplib for RabbitMQ communication. This keeps the implementation small and uses JavaScript, which is already used by Order Service since the Lab 3 change.
 
 The files have separate responsibilities. `index.js` starts the application and defines the routes. `receiver.js` handles RabbitMQ deliveries. `orders.js` provides the shared in-memory array used by both.
 
-Our messaging pattern is a continuous consumer attached to the durable `order_queue`. Order Service publishes through RabbitMQ's default exchange, and RabbitMQ pushes available messages to our registered callback.
+The messaging is a continuous consumer attached to the durable `order_queue`. Order Service publishes through RabbitMQ's default exchange, and RabbitMQ pushes available messages to our registered callback.
 
 We chose this because analytics is currently the only service that needs to process this queue. We can preserve the existing publisher instead of introducing additional exchanges and queues.
 
@@ -116,11 +116,11 @@ These responsibilities run in one Node.js process. Running the receiver and API 
 
 *[Point to the Azure hosting boundaries.]*
 
-“The backend services are hosted on Azure App Service. RabbitMQ runs on an Ubuntu VM. Our storefront uses the instructor-approved VM alternative because Static Web Apps is unavailable in our subscription.”
+“The backend services are hosted on Azure App Service. The storefront and RabbitMQ share an Ubuntu VM. Our storefront uses the instructor-approved VM alternative because Static Web Apps is unavailable in our Azure Student subscription.”
 
-*[Describe the actual final arrangement: shared frontend/RabbitMQ VM, or separate VMs.]*
+*[Point to the shared VM containing the storefront and RabbitMQ.]*
 
-“Our configuration also follows the first four Twelve-Factor principles. Analytics has its own repository, dependencies are declared in the package manifest and lockfile, configuration comes from environment variables, and RabbitMQ is an attached backing service selected through its connection string.”
+“Analytics has its own repository, dependencies are declared in the package manifest and lockfile, configuration comes from environment variables, and RabbitMQ is an attached backing service selected through its connection string. Therefore our configuration follows the first four Twelve-Factor principles.”
 
 *[Point to the shared store and acknowledgement arrow.]*
 
@@ -128,11 +128,11 @@ These responsibilities run in one Node.js process. Running the receiver and API 
 
 Acknowledgements also do not make processing exactly once. A connection failure around acknowledgement can cause redelivery.
 
-For this assignment, the single-process design keeps the system understandable and meets our current scope. Persistence and reliable duplicate detection would be possible future improvements.
+For this assignment, the single-process design keeps the system understandable and meets our current scope. Persistence and reliable duplicate detection would be possible future improvements if the scope and architecture demands them.
 
 Our README records the service repositories, deployment evidence, contributions, and AI assistance. [Briefly describe the actual student review and verification completed.]
 
-That completes our demonstration of order publication, consumption, and analytics locally and on Azure. Thank you for watching.”
+That completes our demonstration of order publication, consumption, and analytics locally and on Azure.”
 
 ## Rehearsal and Review
 

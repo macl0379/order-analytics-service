@@ -7,6 +7,7 @@
 
 ## Preparation
 
+- Record using OBS Studio, the tool listed in the assignment.
 - Open the storefront, service logs, RabbitMQ Management, analytics endpoints, Azure resource group, and [final diagram](README.md#architecture).
 - Start or warm up the services and confirm the intended consumer is active.
 - Keep local/cloud consumers from competing for the same queue during the demonstration.
@@ -33,7 +34,7 @@
 ### Local
 
 - Identify the local services and show their addresses.
-- Show health and the current orders/summary baseline.
+- Show `/health` and the current orders/summary baseline.
 - Submit several orders through the storefront using selections of your choice.
 - Show received-message logs and observable broker activity.
 - Refresh and explain:
@@ -63,7 +64,7 @@
   - Express routes read the same in-memory state.
 - Explain why the receiver and routes share one Node.js process.
 - Describe actual App Service/VM hosting and the approved frontend VM alternative.
-- Confirm whether frontend and broker share a VM; identify the frontend server actually deployed.
+- Explain that the frontend and RabbitMQ share the Ubuntu VM; identify the frontend server actually deployed.
 - Relate the design to codebase, dependencies, environment configuration, and attached backing services.
 - Explain restart data loss and possible redelivery; do not claim exactly-once processing.
 - Briefly mention persistence and duplicate detection as possible future improvements.

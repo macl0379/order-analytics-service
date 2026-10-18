@@ -12,32 +12,24 @@
 
 The Order Analytics Service our group has implemented extends the Algonquin Pet Store by processing orders from RabbitMQ and making the resulting data available through a REST API. The intended results include consumed orders, total revenue, average order value, revenue by product, and the top products by quantity sold.
 
-We use Node.js, Express, and amqplib. The code is moving toward one continuous queue consumer and one HTTP server sharing the same in-memory state. The latest reviewed `main` contains the HTTP routes and a receiver module, but does not yet connect them into a working message-to-API flow. An order recorded by analytics represents a consumed order message; it does not establish payment, shipping, or fulfillment.
+We use Node.js, Express, and amqplib. The service starts a continuous queue consumer and an HTTP server sharing the same in-memory array. The normal entrypoint now calls the receiver; the earlier disconnected-startup description has been superseded. An order recorded by analytics represents a consumed order message; it does not establish payment, shipping, or fulfillment.
 
 ### Current implementation status
 
-Remote branches fetched and reviewed on October 18, 2026:
-
-| Branch | Reviewed revision | Relationship and scope |
-| --- | --- | --- |
-| `origin/main` | [`36ce53b`](https://github.com/macl0379/order-analytics-service/commit/36ce53b) | Adds both product analytics routes; also includes the shared-store fix (`3a8ab90`) and deployment workflow update (`a0449c8`). |
-| `origin/RabbitMQ-connection` | [`159f601`](https://github.com/macl0379/order-analytics-service/commit/159f601) | Older consumer branch, included in main; main has subsequent fixes absent from this branch. |
-| `readme-update` | Documentation working branch | Contains this expanded README; its local application files still reflect the earlier health-only scaffold. |
-
-Unless stated otherwise, implementation details below describe reviewed `origin/main`, not the older application files on this documentation branch. No source branches were merged or application files changed during this review.
+Local main reviewed at [`aec49d7`](https://github.com/macl0379/order-analytics-service/commit/aec49d7) on October 18, 2026. Consumer startup was added in `8172609`; monetary presentation was normalized in `7d368ac`. Documentation edits may be newer than these commits. The actual deployed commit has not been independently identified.
 
 | Area | Current evidence |
 | --- | --- |
-| Runtime and dependencies | Node.js 24.22.0 and npm 11.19.1 were verified locally during setup; Express, amqplib, and dotenv loaded successfully. |
-| Startup | `npm start` runs root `index.js`, starting Express but not the receiver. |
-| HTTP routes | All five required routes are defined on main and returned HTTP 200 from the deployed hostname during the public check below. |
-| State | `orders.js` exports one array; both the entrypoint and receiver import it correctly. No application startup currently invokes the receiver. |
-| Receiver | Shared-state imports and callback naming are fixed on main. When invoked manually in a mock, five valid deliveries were stored and acknowledged. |
-| Calculations | Empty results, all five known-order results, and a four-product quantity ranking passed isolated checks with mocked Express/AMQP. Input defects remain below. |
-| Automated tests | No committed test files or `npm test` script exist in either reviewed source branch. Isolated review checks are described below. |
-| Full application | Azure HTTP endpoints respond; live RabbitMQ processing and local/Azure storefront-to-analytics demonstrations remain unverified. |
+| Startup and state | `npm start` runs `index.js`, which calls `receiveOrders()`. Both modules import the array exported by `orders.js`. |
+| API | All five required routes exist. All returned HTTP 200 in the Azure checks recorded below. |
+| Live data | At approximately 17:32 EDT on October 18, the deployed API held six orders; independent decimal arithmetic matched revenue 992.61 and average 165.44. This was an observed dataset, not a required demo fixture. |
+| Rounding | Receiver rounds numeric line totals before storage. Mocked checks verified the observed floating-point examples without changing quantities or ACK behavior. |
+| Local demonstration | Complete local storefront-to-analytics evidence remains to be recorded or supplied by the group. |
+| Azure demonstration | Populated API responses were verified; the assistant did not submit or trace those orders. Record a controlled deployed storefront-to-analytics demonstration. |
+| Automated tests | No committed test script exists. Automated tests are recommended, not separately required by the assignment. |
+| Submission | Video link, final contributions, student AI evaluation, access confirmation, and final evidence still contain review items. |
 
-TODO: Update this table against the final submitted revision; remove superseded draft notes after checking the evidence.
+TODO: Reconcile the final submitted revision and deployed revision, then replace remaining submission placeholders with actual evidence.
 
 ## Demo Video
 
@@ -57,38 +49,32 @@ The presentation will show the design and messaging rationale, local and Azure o
 | Storefront | Vue.js | [Storefront source](https://github.com/macl0379/store-front) | Displays products and submits orders. |
 | Product Service | Python / Flask | [Product Service — midterm-project branch](https://github.com/yanky65/CST8915-lab02-product-service/tree/midterm-project) | Exposes the product catalog. |
 | Order Service | Node.js / Express | [Order Service source](https://github.com/ZubairD25/order-service.git) | Receives orders and publishes messages. |
-| Order Analytics Service | Node.js / Express / amqplib | [This repository](https://github.com/macl0379/order-analytics-service) | HTTP routes and an unconnected consumer module; integration remains incomplete. |
+| Order Analytics Service | Node.js / Express / amqplib | [This repository](https://github.com/macl0379/order-analytics-service) | Starts the consumer, stores received orders, and exposes the analytics API. |
 | RabbitMQ | Message broker | Not an application repository | Buffers orders in durable `order_queue`. |
 
 The repository links above were confirmed by David. The analytics repository is the group's submission repository. Product Service uses the `midterm-project` branch.
 
-TODO: Record the deployment branch and final commit for each service. This README is being edited on `readme-update`, which is not automatically a deployment branch.
+TODO: Record the deployment branch and final commit for each service. The documentation branch has been merged into main; verify that the final recording and submission use the intended revisions.
 
 ## RabbitMQ Messaging Pattern
 
 ### Design direction: one continuous queue consumer
 
-The reused publisher design sends messages through RabbitMQ's default exchange to `order_queue`. `receiver.js` contains a `channel.consume()` callback, but the HTTP entrypoint does not import or call its exported startup function. Once integrated, RabbitMQ will push deliveries while the process remains connected; HTTP requests will read stored results rather than fetch messages from the queue. This follows RabbitMQ's [JavaScript receiving tutorial](https://www.rabbitmq.com/tutorials/tutorial-one-javascript#receiving).
+The reused publisher design sends messages through RabbitMQ's default exchange to `order_queue`. `index.js` imports and calls the receiver's startup function. RabbitMQ pushes deliveries to its `channel.consume()` callback while connected; HTTP requests read stored results rather than fetch messages from the queue. This follows RabbitMQ's [JavaScript receiving tutorial](https://www.rabbitmq.com/tutorials/tutorial-one-javascript#receiving).
 
 This queue-based design fits the current need: one analytics service must process the orders already published by the existing service. It preserves the publisher's routing and avoids adding a new exchange or a browser connection requirement. Multiple consumers on the same queue would share deliveries, rather than each receiving a copy. Fanout pub/sub would become useful if independent services each needed every order, with a separate queue per service. See RabbitMQ's [work queue](https://www.rabbitmq.com/tutorials/tutorial-two-javascript) and [publish/subscribe](https://www.rabbitmq.com/tutorials/tutorial-three-javascript) explanations.
 
-### Current receiver behavior and integration blockers
+### Current processing behavior
 
-Main has fixed the earlier missing module, import/export mismatch, and callback shadowing. Both `index.js` and `receiver.js` now use `const orders = require('./orders')`; `orders.js` exports the array directly. The callback receives `msg`, parses its content, pushes the parsed value into the array, and acknowledges `msg`.
+Both modules import `orders.js`, which exports the shared array directly. The receiver parses each JSON delivery, rounds its numeric `totalPrice` to cents, stores the order, and acknowledges the delivery. Processing exceptions follow the existing NACK-without-requeue path. Without a configured dead-letter destination, rejected messages are discarded.
 
-The remaining startup blocker is that `index.js` never imports and calls `receiveOrders()`. A mocked normal startup created no broker connections. Running `node receiver.js` also only loads its exported function; it does not invoke that function. Start one consumer from the normal application entrypoint, after dotenv initialization, and handle startup failure.
+The normal entrypoint now starts the receiver and exits on a rejected startup promise. HTTP startup is not gated on consumer registration, and `channel.consume()` is not awaited. These are reliability considerations rather than a reason to claim the consumer is still disconnected.
 
-There is no payload validation beyond JSON parsing. A mock delivery containing a string `totalPrice` was stored and acknowledged, then broke the summary route. The catch block negatively acknowledges any processing exception without requeue, so the final design should distinguish invalid input from internal failures. Rejection without requeue sends a message to a configured dead-letter exchange or discards it if none is configured. No dead-letter configuration is declared here. See [RabbitMQ rejection behavior](https://www.rabbitmq.com/docs/confirms#negative-acknowledgement-and-requeuing-of-deliveries).
+### Recommendations, not extra assignment requirements
 
-### Intended processing sequence after correction
+Automated tests, explicit prefetch, stricter payload validation, safe dictionary keys, connection-aware readiness, reconnection, graceful shutdown, integer-cent aggregation, and deterministic tie handling are engineering recommendations. They are not separately mandated features. The group has chosen to keep scope small and apply the rounding change; do not describe broader proposed fixes as implemented.
 
-The independent shared store and `msg` naming now exist. Complete startup wiring, load environment configuration, open a connection/channel, declare matching durable `order_queue`, register one consumer, validate each delivery, update the shared store, and acknowledge only after success. Await consumer registration so startup failures can be handled; the current receiver does not await `channel.consume()`.
-
-The existing receiver relies on the client's default manual-acknowledgement mode; making `{ noAck: false }` explicit is recommended. `prefetch(1)` is also recommended but is not implemented. JSON parsing exists; payload validation does not. Connection/channel error handling, reconnection, consumer cancellation, and graceful shutdown are still absent.
-
-The previously inspected lab publisher requests persistent messages and publisher confirms; verify those properties in the team's current Order Service revision before documenting its deployed behavior. Publisher confirms do not prove analytics processed the order. See [RabbitMQ acknowledgements and confirms](https://www.rabbitmq.com/docs/confirms).
-
-TODO: Correct the integration, then record the final invalid-message and recovery policies. Separate permanently invalid input from internal processing failures instead of discarding both indiscriminately.
+The application must still produce accurate required results and demonstrate normal continuous consumption. Existing health reports HTTP service status rather than a detailed broker readiness check. Reconnection and exactly-once processing are not claimed.
 
 ### Storage and delivery limits
 
@@ -98,15 +84,15 @@ Unacknowledged messages can be redelivered after connection loss. Updating memor
 
 ## Architecture
 
-The following is the intended Azure topology, including the frontend VM alternative. The receiver-to-store path works under mocked delivery on main, but startup does not enable live consumption. Reconcile this diagram with the final code and deployed resources before submission.
+David confirmed on October 18 that the storefront and RabbitMQ share one Ubuntu VM. The diagram reflects that hosting arrangement and the application's communication design; verify final resource names before recording. The frontend server software has not been independently confirmed.
 
 ```mermaid
 flowchart LR
     Browser["User's browser"]
     Viewer["API client: browser, curl, or Postman"]
 
-    subgraph VM["Ubuntu VM — planned shared frontend and broker host"]
-        Frontend["Vue storefront — target: Nginx"]
+    subgraph VM["Ubuntu VM — shared storefront and broker host"]
+        Frontend["Vue storefront"]
         Rabbit["RabbitMQ — durable order_queue"]
     end
 
@@ -117,7 +103,7 @@ flowchart LR
             Consumer["Continuous AMQP consumer"]
             State["Shared in-memory orders and calculations"]
             API["Express REST API"]
-            Consumer -->|"Validate and update"| State
+            Consumer -->|"Parse, round, and record"| State
             API -->|"Read snapshots"| State
         end
     end
@@ -137,7 +123,7 @@ The browser calls the backend APIs directly after downloading the frontend. In t
 
 Main now keeps HTTP startup/routes in `index.js`, message handling in `receiver.js`, and shared state in `orders.js`. Calculations currently live in route handlers; a separate `analytics.js` is optional, not required. The receiver no longer imports the HTTP entrypoint. No separate consumer process or WebSocket server is needed.
 
-TODO: Import and start the receiver once from `index.js`, await registration, and handle startup/connection failures. Merely exporting the function does not start it.
+The receiver is now called from `index.js`. Awaiting registration and expanding recovery handling remain optional improvements; the current startup behavior is described above.
 
 ### Diagram-to-file mapping
 
@@ -145,32 +131,32 @@ This mapping describes reviewed `main`; the boxes in the Azure diagram are respo
 
 | Diagram component or connection | Responsible file / component | Current state |
 | --- | --- | --- |
-| Analytics application startup | `index.js`; `package.json` start script | Starts Express only; must also start one receiver. |
-| Express REST API and client-to-API connection | `index.js` | All five routes exist and respond publicly; live order processing is unverified. |
+| Analytics application startup | `index.js`; `package.json` start script | Starts the receiver and Express; HTTP does not wait for consumer registration. |
+| Express REST API and client-to-API connection | `index.js` | All five routes respond publicly; six stored orders and matching calculations were observed. |
 | Shared in-memory state | `orders.js` | Both modules import the same array correctly in one process. |
 | Calculations | Route handlers in `index.js` | Summary, grouping, and ranking pass known valid mocked inputs; validation and grouping-key defects remain. |
-| RabbitMQ-to-consumer connection | `receiver.js` using amqplib | Connection/declaration/consume code exists but is not started by the application. |
+| RabbitMQ-to-consumer connection | `receiver.js` using amqplib | Called by the entrypoint; uses matching durable `order_queue`. |
 | Consumer-to-state connection | `receiver.js` callback plus `orders.js` | Five manually delivered mock orders reached the same array read by routes; input validation is absent. |
 | Consumer-to-RabbitMQ acknowledgement | `receiver.js` | Five valid mock deliveries produced five ACKs; malformed JSON produced a NACK without requeue. |
 | Frontend and browser API requests | Team storefront repository | Outside this analytics repository; deployment still needs documented evidence. |
 | Product catalog and order publisher | Team Product and Order repositories | Separate backend services; their deployment does not implement analytics consumption. |
-| RabbitMQ queue and VM/Nginx hosting | Broker and hosting configuration | Infrastructure responsibilities; declaring a queue does not provision the VM or deploy the applications. |
+| RabbitMQ queue and shared VM hosting | Broker and hosting configuration | Storefront and RabbitMQ share the VM; record actual frontend serving and deployment details. |
 
 ### Frontend hosting exception
 
-Static Web Apps is unavailable in the team's Azure for Students subscription. David reports that the instructor-approved frontend VM alternative from Lab 3 also applies to this midterm. The intended frontend host is Nginx on the RabbitMQ VM; backend applications remain on App Service.
+Static Web Apps is unavailable in the team's Azure for Students subscription. David reports that the instructor-approved frontend VM alternative from Lab 3 also applies to this midterm. David confirmed the frontend shares the RabbitMQ VM; backend applications remain on App Service. The actual frontend server software still needs to be recorded.
 
 TODO: Retain the instructor approval as supporting evidence, confirm whether the deployed frontend uses Nginx or the development server, and record the actual frontend CI/CD procedure. The hosting exception alone does not establish an exception to frontend CI/CD.
 
 ## API Contract
 
-These are the [required routes](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project#part-1-build-the-order-analytics-service). Reviewed `main` defines all five; the documentation branch's local entrypoint still defines only `/health`.
+These are the [required routes](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project#part-1-build-the-order-analytics-service). Current main defines all five.
 
 | Method | Path | Response content | Status in this revision |
 | --- | --- | --- | --- |
 | GET | `/health` | Service status | Route defined; broker status not checked. |
-| GET | `/orders` | All consumed orders since startup | Defined on `main`; no running receiver populates its array. |
-| GET | `/analytics/summary` | `totalOrders`, `totalRevenue`, `averageOrderValue` | Defined on `main`; calculations checked with injected valid data only. |
+| GET | `/orders` | All consumed orders since startup | Defined and populated in the observed Azure dataset. |
+| GET | `/analytics/summary` | `totalOrders`, `totalRevenue`, `averageOrderValue` | Defined; mocked fixture and independent arithmetic on the observed live dataset matched. |
 | GET | `/analytics/products` | `productName`, `orderCount`, `totalRevenue` per product | Defined on main; passed known-order mocked results; grouping-key collision remains. |
 | GET | `/analytics/top-products` | Up to three `productName`, `totalQuantity` entries | Defined on main; quantity ranking and top-three limit passed mocks; grouping-key collision remains. |
 
@@ -199,11 +185,11 @@ Example message for two units of Dog Food:
 
 The summary route currently counts array entries, sums `order.totalPrice`, divides by order count, and rounds the returned revenue and average with `toFixed(2)` followed by `Number(...)`. Its empty result is all zero. It does not multiply a line total by quantity again.
 
-These calculations use JavaScript floating-point arithmetic, not integer cents. With injected valid numeric orders, the five-order example below produced the expected summary. With an injected string total, the route threw `TypeError`; a missing total produced non-finite results serialized as JSON `null`. The receiver currently performs no schema or numeric validation to prevent these cases.
+These calculations use JavaScript floating-point arithmetic, not integer-cent accumulation. The receiver now normalizes numeric line totals with `Number(order.totalPrice.toFixed(2))` before storage; summary and grouped revenue also format their returned values to cents. No broader schema-validation change is claimed. Earlier invalid-input probes predate this rounding change.
 
 Product grouping counts array entries and sums revenue by name. Top-products sums quantity by name, sorts descending, and returns up to three. Both currently group into a plain `{}` with a truthiness check; a product named `constructor` collides with an inherited property and disappears from both outputs in a mock. Use a `Map` or a null-prototype dictionary to handle arbitrary names correctly.
 
-Proposed next rules: require a product object, finite numeric price/total, and positive integer quantity; verify line-total consistency; accumulate money in integer cents. TODO: Finalize rounding, invalid-input, name-grouping, and ranking-tie policies and test them against the final code.
+Optional future work includes stricter input checks, safe grouping keys, integer-cent accumulation, and explicit tie rules. These proposals do not prescribe extra submission features; document only the behavior retained in the final code.
 
 ## Configuration and Local Startup
 
@@ -214,11 +200,11 @@ Use Node.js 24 LTS and npm. RabbitMQ plus the other three application services a
 | Variable | Current behavior / intended use |
 | --- | --- |
 | `PORT` | Implemented in `index.js`; defaults to `4000`. Use the platform-provided port on App Service. |
-| `RABBITMQ_CONNECTION_STRING` | Read at module load by `receiver.js`, with a fallback URL. Currently unreachable through `npm start` because the entrypoint does not load/start the receiver. |
+| `RABBITMQ_CONNECTION_STRING` | Read by `receiver.js` when loaded by the entrypoint; controls the broker connection, with a localhost fallback. |
 
 `dotenv` is loaded by the entrypoint, so a local ignored `.env` can provide configuration. Keep that initialization before loading modules that read environment variables at import time. The chosen broker variable is now `RABBITMQ_CONNECTION_STRING`, not the earlier proposed `RABBITMQ_URL`. Its value has this shape: `amqp://<user>:<password>@<host>:5672/<vhost>`. Use the same broker/vhost as the publisher and keep real credentials out of Git. On App Service, provide it as an application setting after correcting startup integration.
 
-### Windows PowerShell — current HTTP scaffold
+### Windows PowerShell
 
 Run from the cloned analytics repository:
 
@@ -235,7 +221,7 @@ In a second PowerShell terminal:
 Invoke-RestMethod 'http://localhost:4000/health'
 ```
 
-### Ubuntu Bash — current HTTP scaffold
+### Ubuntu Bash
 
 Run from the cloned analytics repository:
 
@@ -251,13 +237,13 @@ In a second Ubuntu terminal:
 curl --fail http://localhost:4000/health
 ```
 
-Stop the foreground process with Ctrl+C. These commands exercise HTTP startup only, not message consumption. On reviewed `main`, `/orders` and `/analytics/summary` can also be requested, but an empty result does not establish a working receiver. TODO: Add the verified broker and full-stack startup procedure after the integration defects are fixed. Do not start an extra standalone consumer against the shared queue to compensate for missing application wiring.
+Stop the foreground process with Ctrl+C. These commands start the API and request a broker connection. Supply the actual RabbitMQ connection string through an ignored `.env` or the process environment; the publisher and consumer must use the same broker/vhost. The full local demonstration also requires Product Service, Order Service, and the storefront. Do not run competing analytics consumers against the same test queue.
 
 ## Verification and Evidence
 
-### Known-order acceptance example
+### Optional known-order verification example
 
-The following is the acceptance dataset. On main `36ce53b`, all five orders were delivered through the manually invoked receiver with mocked AMQP and Express; orders, summary, grouping, and ranking matched the expectations below, with five ACKs and no NACKs. These orders have not passed through a real broker or deployed consumer. For integration, use a fresh dedicated test broker/vhost or an explicitly recorded baseline; do not purge a shared queue. Start analytics once, then submit these orders through the storefront.
+The following is an optional verification dataset, not a required submission or video sequence. Any suitable orders may be used to demonstrate correct results. On main `36ce53b`, all five orders were delivered through the manually invoked receiver with mocked AMQP and Express; orders, summary, grouping, and ranking matched the expectations below, with five ACKs and no NACKs. These orders have not passed through a real broker or deployed consumer. For integration, use a fresh dedicated test broker/vhost or an explicitly recorded baseline; do not purge a shared queue. Start analytics once, then submit these orders through the storefront.
 
 | Order | Product | Unit price | Quantity | Expected line total |
 | --- | --- | --- | --- | --- |
@@ -284,14 +270,16 @@ The top-products ranking should therefore be Bird Seeds, Dog Food, then Cat Food
 | Local dependency setup | Node 24.22.0 and module loading previously verified | Capture runtime and final source revision. |
 | Reviewed source syntax | `index.js` and `receiver.js` parsed for both reviewed revisions | This does not prove imports or application startup succeed. |
 | HTTP route callbacks and shared store | Main `36ce53b`: empty data responses and five-order results matched expectations; valid deliveries produced 5 ACKs, 0 NACKs, 5 stored orders after manual receiver invocation | Verify the same flow through a real broker and HTTP client. |
-| Normal startup | Mocked `npm start` entrypoint created no broker connection; receiver is not called | Wire startup and verify one active consumer. |
+| Normal startup | Review of `8172609` confirmed the entrypoint calls the receiver; HTTP starts before registration finishes | Record an active consumer during the actual demo; readiness improvements are optional. |
 | Quantity ranking | Four-product mock returned only the top three by quantity, excluding a high-revenue/low-quantity product | Retain a focused regression test. |
 | Grouping-key collision | One acknowledged product named `constructor` remained in `/orders` but disappeared from products/top-products outputs | Use safe map keys and add a regression test. |
-| Invalid totals | Main's summary threw `TypeError` for a string total; missing total serialized revenue/average as `null` | Add validation and regression checks. |
-| Automated analytics tests | No committed tests or test script in reviewed branches; the checks above were isolated review probes | Commit focused tests and record their command and results. |
+| Historical invalid-input probes | Before the rounding change, string/missing totals broke summary behavior; these probes are not a claim about the updated receiver's acceptance behavior | Optional focused validation/regression checks. |
+| Automated analytics tests | No committed test script; the checks above were isolated review probes | Optional; record actual results if tests are added. |
 | Local full-stack run | Pending | Browser request JSON/types, broker state, all analytics responses, source commits. |
 | Product Service on Azure | `/products` returned HTTP 200 on October 18, 2026 | [Deployment run](https://github.com/yanky65/CST8915-lab02-product-service/actions/runs/39156213130); recheck before recording. |
 | Analytics HTTP on Azure | October 18, 2026, approximately 17:12 EDT: all five GET endpoints returned HTTP 200 JSON; `/orders`, products and top-products were `[]`; summary was all zero | HTTP operation only; no order was submitted and no broker processing was verified. |
+| Populated analytics on Azure | October 18, approximately 17:32 EDT: six orders, revenue 992.61, average 165.44. Decimal recalculation matched; grouping and quantity totals were consistent | Assistant did not submit/trace those orders; record a controlled storefront demonstration. |
+| Rounding followup | Receiver's one-line change normalized observed floating-point examples in a mock, preserving numeric output and ACK behavior | Confirm presentation in the deployed revision used for recording. |
 | Storefront correction | David reported the URL configuration issue resolved | Capture a successful current browser catalog request. |
 | Azure order-to-analytics run | Pending | Same known-order checks against deployed services and matching revisions. |
 
@@ -309,7 +297,7 @@ TODO: Link the final screenshots/logs or video timestamps from this repository. 
 | Order Service | App Service; [recorded base URL](https://order-service-mp-exgrfra3dufjddd7.swedencentral-01.azurewebsites.net) | End-to-end verification pending. |
 | Storefront | [Reported VM address](http://51.12.48.232:8080/) | David reports URL fix; final hosting/CI/CD evidence pending. |
 | RabbitMQ | Ubuntu VM; AMQP connection kept in backend settings | TODO: Record VM resource name and network configuration without credentials. |
-| Analytics | App Service target `order-analytics-service`; [GET /health](https://order-analytics-service-hqdma3cmhadyhka2.swedencentral-01.azurewebsites.net/health) | All five GET endpoints returned HTTP 200 with empty data at approximately 17:12 EDT on October 18. Runtime/scale settings and live consumption remain unverified. |
+| Analytics | App Service target `order-analytics-service`; [GET /health](https://order-analytics-service-hqdma3cmhadyhka2.swedencentral-01.azurewebsites.net/health) | All five GET endpoints returned HTTP 200; populated results were verified at approximately 17:32 EDT on October 18. Runtime/scale settings and a controlled demonstration still need evidence. |
 
 The analytics workflow at `.github/workflows/main_order-analytics-service.yml` triggers on pushes to main and manual dispatch, builds with Node 24, and targets `order-analytics-service` using Azure OIDC secret references. It runs `npm install` and optional build/test scripts. There is no test script in the reviewed manifest, so `--if-present` can skip testing without failing. Recommend `npm ci` and actual test assertions before treating a green build as verification. Workflow-run success, Azure runtime settings, and the deployed commit were not checked during the public HTTP probe.
 
@@ -325,8 +313,8 @@ The [Twelve-Factor App](https://12factor.net/) provides the basis for these impl
 | --- | --- | --- |
 | I. Codebase | Separate analytics Git repository with reviewed changes. | Repository exists. |
 | II. Dependencies | Declare libraries in `package.json`; reproduce installs using the lockfile. | Manifest and lockfile exist; direct dependency specifications agree. |
-| III. Config | Supply the port and broker connection through environment variables. | Both settings exist in source; receiver startup remains disconnected. |
-| IV. Backing services | Treat RabbitMQ as an attached service selected through configuration. | Connection logic exists in `receiver.js`; working integration remains unverified. |
+| III. Config | Supply the port and broker connection through environment variables. | Both settings are used by the current startup path. |
+| IV. Backing services | Treat RabbitMQ as an attached service selected through configuration. | Connection logic is invoked from the entrypoint; record the deployed configuration without credentials. |
 
 ## Team Contributions
 
@@ -342,7 +330,7 @@ TODO: Confirm name spelling, GitHub usernames, and each member's actual contribu
 
 ## AI Assistance and Student Review
 
-David used OpenAI Codex to assist with assignment analysis, inspection of reused lab code, architecture research, Node.js setup checks, deployment/frontend troubleshooting, proposed acceptance data, and drafting this README. Codex fetched source branches and ran isolated Express/AMQP checks, including main `36ce53b` with all five routes, manually delivered orders, numeric-input failure, and a grouping-name collision. It also checked the five public analytics GET endpoints, which returned HTTP 200 with empty data. No orders were submitted, no live broker processing was verified, and no application source was changed during this review. Codex consulted the assignment and official RabbitMQ documentation.
+David used OpenAI Codex to assist with assignment analysis, inspection of reused lab code, architecture research, Node.js setup checks, deployment/frontend troubleshooting, proposed acceptance data, and drafting this README. Codex fetched source branches and ran isolated Express/AMQP checks, including main `36ce53b` with all five routes, manually delivered orders, numeric-input failure, and a grouping-name collision. It also checked the five public analytics GET endpoints, which returned HTTP 200 with empty data. No orders were submitted by the assistant. Later public checks observed six stored orders with independently matching calculations; the assistant did not trace those messages through the broker. Codex subsequently made only the requested one-line rounding change, with mocked verification, and helped draft and revise both demo documents. Codex consulted the assignment and official RabbitMQ documentation.
 
 `receiver.js` separately states that its code was developed with ChatGPT and comments were added by Collin MacLeod. TODO: Collin should expand that disclosure with the actual assistance, student modifications, verification, and citation. This record does not infer AI use for other code without evidence.
 
@@ -354,12 +342,30 @@ The code and deployment claims above were separated from proposed behavior. The 
 
 TODO: Before submission, document what the students corrected, rejected, tested, or rewrote, and disclose any additional tools used by other members. Follow the [assignment's academic-integrity requirements](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project#academic-integrity).
 
+## Required Items and Optional Improvements
+
+The [assignment](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project) is the authority. Scripts cover the topics; actual evidence and submission remain necessary.
+
+| Required item | Current position |
+| --- | --- |
+| Consumer and five endpoints | Present; demonstrate accuracy. |
+| First four Twelve-Factor principles | Addressed; verify deployed configuration. |
+| Local and Azure demonstrations | Record storefront-to-analytics evidence in both. |
+| Hosting | Backend App Services, RabbitMQ VM, approved frontend VM alternative. |
+| README | Finish evidence, contributions, and video link. |
+| Video | All members; OBS; unlisted; 5–10 minutes. |
+| Integrity/access | AI evaluation/citation; private repository; instructor collaborator. |
+| Submission | Brightspace repository URL and deadline confirmation. |
+
+Automated tests, extra validation, readiness, and reconnection are recommendations. No fixed orders, WebSockets, fanout, dashboard, database, or continuous uptime is required. Setup/challenge notes are optional.
+
 ## Submission Review
 
 Use the [current assignment](https://github.com/ramymohamed10/26F_CST8915_Midterm_Project) and Brightspace as the authority. The published due date is October 23, 2026; confirm the exact Eastern time in Brightspace.
 
 - [ ] Replace all `TODO` entries and reconcile this draft with the final code and deployment.
 - [ ] Confirm the analytics repository is private and `ramymohamed10` has collaborator access.
+- [ ] Confirm equitable contributions, shared understanding, and no intergroup collaboration.
 - [ ] Include source, deployment evidence, final diagram, working video link, and actual contributions.
 - [ ] Verify local and Azure demonstrations and the AI disclosure.
 - [ ] Merge reviewed documentation into the revision being submitted and submit the repository URL through Brightspace.
