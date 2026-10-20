@@ -1,6 +1,6 @@
 # Order Analytics Service
 
-**CST8915 — Full-stack Cloud-native Development | Fall 2026**
+**CST8915: Full-stack Cloud-native Development | Fall 2026**
 
 **Team:** Collin MacLeod, Azubair Dawd, David Yin
 
