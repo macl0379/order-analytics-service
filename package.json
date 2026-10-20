@@ -1,7 +1,7 @@
 {
   "name": "order-analytics-service",
   "version": "1.0.0",
-  "description": "**Student Names**: Collin MacLeod, Azubair Dawd, David Yin\r **Course**: CST8915 Full-stack Cloud-native Development\r **Semester**: Fall 2026",
+  "description": "RabbitMQ order consumer and REST analytics API for the CST8915 midterm project.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
